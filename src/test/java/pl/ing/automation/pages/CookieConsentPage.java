@@ -114,7 +114,7 @@ public final class CookieConsentPage {
         try {
             locator.waitFor(new Locator.WaitForOptions()
                     .setState(WaitForSelectorState.VISIBLE)
-                    .setTimeout(1000));
+                    .setTimeout(3000));
             return locator;
         } catch (TimeoutError ignored) {
             return null;
