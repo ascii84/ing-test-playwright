@@ -2,7 +2,6 @@ package pl.ing.automation.pages;
 
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.AriaRole;
-import com.microsoft.playwright.options.WaitForSelectorState;
 import com.microsoft.playwright.options.WaitUntilState;
 
 import java.util.ArrayList;
@@ -91,8 +90,10 @@ public final class CookieConsentPage {
         checkForCaptcha();
 
         for (Frame frame : page.frames()) {
-            Locator button = findVisible(frame, AriaRole.BUTTON, name);
-            if (button != null) {
+            Locator button = frame.getByRole(AriaRole.BUTTON,
+                    new Frame.GetByRoleOptions().setName(name)).first();
+
+            if (button.count() > 0) {
                 button.click();
                 return;
             }
@@ -108,9 +109,10 @@ public final class CookieConsentPage {
 
     private void setCategory(Pattern category, boolean enabled) {
         for (Frame frame : page.frames()) {
-            Locator toggle = findVisible(frame, AriaRole.SWITCH, category);
+            Locator toggle = frame.getByRole(AriaRole.SWITCH,
+                    new Frame.GetByRoleOptions().setName(category)).first();
 
-            if (toggle != null) {
+            if (toggle.count() > 0) {
                 String currentState = toggle.getAttribute("aria-checked");
                 if (currentState == null) {
                     throw new AssertionError("Cookie switch has no aria-checked attribute: " + category);
@@ -121,8 +123,10 @@ public final class CookieConsentPage {
                 return;
             }
 
-            Locator checkbox = findVisible(frame, AriaRole.CHECKBOX, category);
-            if (checkbox != null) {
+            Locator checkbox = frame.getByRole(AriaRole.CHECKBOX,
+                    new Frame.GetByRoleOptions().setName(category)).first();
+
+            if (checkbox.count() > 0) {
                 if (checkbox.isChecked() != enabled) {
                     checkbox.setChecked(enabled);
                 }
@@ -134,20 +138,6 @@ public final class CookieConsentPage {
                 + ". Page URL: " + page.url()
                 + ". Frame URLs: " + frameUrls()
                 + ". Page text: " + pageText());
-    }
-
-    private Locator findVisible(Frame frame, AriaRole role, Pattern name) {
-        Locator locator = frame.getByRole(role,
-                new Frame.GetByRoleOptions().setName(name)).first();
-
-        try {
-            locator.waitFor(new Locator.WaitForOptions()
-                    .setState(WaitForSelectorState.VISIBLE)
-                    .setTimeout(3000));
-            return locator;
-        } catch (TimeoutError ignored) {
-            return null;
-        }
     }
 
     private String pageText() {
