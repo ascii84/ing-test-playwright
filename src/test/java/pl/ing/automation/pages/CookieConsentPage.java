@@ -61,30 +61,29 @@ public final class CookieConsentPage {
         }
 
         for (Frame frame : page.frames()) {
+            String frameUrl = frame.url();
+
+            if (frameUrl != null && frameUrl.toLowerCase().contains("captcha")) {
+                throw new AssertionError(
+                        "ING loaded a CAPTCHA frame instead of the cookie banner. "
+                                + "The test does not solve or bypass CAPTCHA. URL: " + frameUrl);
+            }
+
             try {
                 String frameText = frame.locator("body").innerText(
                         new Locator.InnerTextOptions().setTimeout(1500));
+
                 if (CAPTCHA.matcher(frameText).find()) {
                     throw new AssertionError(
                             "ING displayed an anti-bot verification page instead of the cookie banner. "
                                     + "The test does not solve or bypass CAPTCHA. "
-                                    + "Frame URL: " + frame.url()
+                                    + "Frame URL: " + frameUrl
                                     + ", page URL: " + page.url()
                                     + ", page text: " + shorten(frameText));
                 }
             } catch (TimeoutError ignored) {
                 // Pusta lub wciąż ładująca się ramka może jeszcze nie mieć treści.
             }
-        }
-
-        boolean captchaFrame = page.frames().stream()
-                .map(Frame::url)
-                .anyMatch(frameUrl -> frameUrl != null
-                        && frameUrl.toLowerCase().contains("captcha"));
-        if (captchaFrame) {
-            throw new AssertionError(
-                    "ING loaded a CAPTCHA frame instead of the cookie banner. "
-                            + "The test does not solve or bypass CAPTCHA. URL: " + page.url());
         }
     }
 
