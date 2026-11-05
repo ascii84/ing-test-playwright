@@ -1,4 +1,4 @@
-package pl.ing.automation;
+package pl.ing.automation.pages;
 
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.AriaRole;
@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 /**
  * Page Object for the ING cookie consent banner.
  */
-final class CookieConsentPage {
+public final class CookieConsentPage {
 
     private static final String URL = "https://www.ing.pl/";
 
@@ -29,24 +29,24 @@ final class CookieConsentPage {
 
     private final Page page;
 
-    CookieConsentPage(Page page) {
+    public CookieConsentPage(Page page) {
         this.page = page;
     }
 
-    void open() {
+    public void open() {
         page.navigate(URL, new Page.NavigateOptions()
                 .setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
     }
 
-    void acceptAnalyticsOnly() {
+    public void acceptAnalyticsOnly() {
         checkForCaptcha();
-        clickText(CUSTOMIZE);
+        clickButton(CUSTOMIZE);
         setCategory(ANALYTICS, true);
         setCategory(MARKETING, false);
-        clickText(SAVE);
+        clickButton(SAVE);
     }
 
-    void reload() {
+    public void reload() {
         page.reload();
     }
 
@@ -64,8 +64,29 @@ final class CookieConsentPage {
         }
     }
 
-    private void clickText(Pattern text) {
-        waitForText(text).click();
+    private void clickButton(Pattern name) {
+        waitForButton(name).click();
+    }
+
+    private Locator waitForButton(Pattern name) {
+        long endTime = System.nanoTime() + Duration.ofSeconds(30).toNanos();
+
+        while (System.nanoTime() < endTime) {
+            checkForCaptcha();
+
+            for (Frame frame : page.frames()) {
+                Locator button = frame.getByRole(AriaRole.BUTTON,
+                        new Frame.GetByRoleOptions().setName(name)).first();
+
+                if (button.count() > 0 && button.isVisible()) {
+                    return button;
+                }
+            }
+
+            page.waitForTimeout(250);
+        }
+
+        throw new AssertionError("Could not find visible button: " + name);
     }
 
     private void setCategory(Pattern category, boolean enabled) {
@@ -104,23 +125,5 @@ final class CookieConsentPage {
         if (category == ANALYTICS) {
             throw new AssertionError("Could not find the analytics cookie setting.");
         }
-    }
-
-    private Locator waitForText(Pattern text) {
-        long endTime = System.nanoTime() + Duration.ofSeconds(30).toNanos();
-
-        while (System.nanoTime() < endTime) {
-            checkForCaptcha();
-
-            for (Frame frame : page.frames()) {
-                Locator locator = frame.getByText(text).first();
-                if (locator.count() > 0 && locator.isVisible()) {
-                    return locator;
-                }
-            }
-            page.waitForTimeout(250);
-        }
-
-        throw new AssertionError("Could not find visible control: " + text);
     }
 }

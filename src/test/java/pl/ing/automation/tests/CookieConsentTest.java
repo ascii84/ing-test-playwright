@@ -1,4 +1,4 @@
-package pl.ing.automation;
+package pl.ing.automation.tests;
 
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.Cookie;
@@ -6,6 +6,7 @@ import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import pl.ing.automation.pages.CookieConsentPage;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
