@@ -170,7 +170,11 @@ Workflow znajduje się w `.github/workflows/cross-browser.yml`. Najpierw job `pr
 
 Workflow uruchamia się po `push`, `pull_request` oraz ręcznie przez `workflow_dispatch`. Raporty Surefire i screenshoty błędów są publikowane jako artefakty. Przed instalacją binariów workflow wykonuje osobny krok `install-deps`, który instaluje systemowe biblioteki dla wszystkich silników Playwright. Następnie pobierane są przeglądarki. Są to kroki zgodne z oficjalną instrukcją Playwright Java.
 
-## Wzorzec Page Object Model\n\nKlasa `CookieConsentPage` enkapsuluje nawigację po stronie ING, obsługę ewentualnej ręcznej weryfikacji oraz interakcje z banerem zgód. `CookieConsentTest` pozostaje klasą testową: konfiguruje przeglądarkę, wywołuje metody Page Objectu i weryfikuje zapisane cookies. Projekt używa wyłącznie Playwright Java (bez Selenium i TypeScript).\n\n## Struktura projektu
+## Wzorzec Page Object Model
+
+Klasa `CookieConsentPage` enkapsuluje nawigację po stronie ING, obsługę ewentualnej ręcznej weryfikacji oraz interakcje z banerem zgód. `CookieConsentTest` pozostaje klasą testową: konfiguruje przeglądarkę, wywołuje metody Page Objectu i weryfikuje zapisane cookies. Projekt używa wyłącznie Playwright Java (bez Selenium i TypeScript).
+
+## Struktura projektu
 
 ```text
 .
@@ -180,7 +184,8 @@ Workflow uruchamia się po `push`, `pull_request` oraz ręcznie przez `workflow_
 ├── src/
 │   └── test/
 │       ├── java/pl/ing/automation/
-│       │   ├── CookieConsentPage.java\n│       │   └── CookieConsentTest.java
+│       │   ├── CookieConsentPage.java
+│       │   └── CookieConsentTest.java
 │       └── resources/
 │           └── junit-platform.properties
 ├── .gitignore
