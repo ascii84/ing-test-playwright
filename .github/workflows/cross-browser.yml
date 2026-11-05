@@ -24,8 +24,8 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # Resolve Maven plugins/dependencies once before starting the matrix.
-      # This avoids three fresh runners hitting Maven Central at the same time.
+      # Pobierz wcześniej wtyczki i zależności Maven.
+      # Dzięki temu trzy osobne zadania nie pobierają ich jednocześnie.
       - name: Pre-resolve project and Playwright CLI dependencies
         run: |
           mvn -B -DskipTests test
@@ -35,8 +35,8 @@ jobs:
 
   e2e:
     name: E2E / ${{ matrix.browser }}
-    # Set repository variable ING_RUNNER=self-hosted to use an ING-approved/trusted network.
-    # The default hosted runner is pinned to Ubuntu 24.04 for reproducibility.
+    # Ustaw zmienną repozytorium ING_RUNNER=self-hosted, aby użyć zaufanej sieci.
+    # Domyślnie zadanie działa na Ubuntu 24.04, aby zachować powtarzalność środowiska.
     runs-on: ${{ vars.ING_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 20
     strategy:
@@ -56,8 +56,8 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # Install only the dependencies required by this matrix browser.
-      # This avoids installing WebKit/GStreamer dependencies in Chromium jobs.
+      # Zainstaluj tylko zależności potrzebne dla przeglądarki z bieżącego zadania.
+      # Dzięki temu zadania Chromium nie instalują zależności WebKit/GStreamer.
       - name: Install Linux dependencies for selected browser
         run: >-
           mvn -B -DskipTests
@@ -77,7 +77,7 @@ jobs:
 
       - name: Upload test reports and failure screenshots
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: test-results-${{ matrix.browser }}
           if-no-files-found: ignore
