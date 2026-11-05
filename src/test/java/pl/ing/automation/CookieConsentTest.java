@@ -62,8 +62,11 @@ class CookieConsentTest {
 
         try {
             playwright = Playwright.create();
+            boolean headed = Boolean.getBoolean("headed");
             browser = browserType(playwright, browserName)
-                    .launch(new BrowserType.LaunchOptions().setHeadless(true));
+                    .launch(new BrowserType.LaunchOptions()
+                            .setHeadless(!headed)
+                            .setSlowMo(headed ? 150 : 0));
             context = browser.newContext(new Browser.NewContextOptions()
                     .setLocale("pl-PL")
                     .setTimezoneId("Europe/Warsaw")
@@ -78,9 +81,9 @@ class CookieConsentTest {
                     .setWaitUntil(WaitUntilState.DOMCONTENTLOADED)
                     .setTimeout(60_000));
 
-            // ING may show an anti-bot interstitial to public CI IP ranges instead of the cookie banner.
-            // We explicitly detect it and stop; CAPTCHA solving or bypassing is intentionally not automated.
-            assertNoSecurityChallenge(page);
+            // ING may show an anti-bot interstitial. In local headed mode the user can
+            // complete it manually in the visible browser, then resume from Playwright Inspector.
+            handleSecurityChallenge(page, headed);
             clickVisibleControl(page, CUSTOMIZE, "Dostosuj");
             setCategoryState(page, ANALYTICS, true, true);
             // Marketing is deliberately left disabled when this optional category is present.
@@ -142,7 +145,7 @@ class CookieConsentTest {
         };
     }
 
-    private static void assertNoSecurityChallenge(Page page) {
+    private static boolean isSecurityChallengeVisible(Page page) {
         String bodyText = "";
         try {
             bodyText = page.locator("body").innerText();
@@ -157,12 +160,42 @@ class CookieConsentTest {
                 .map(url -> url.toLowerCase(Locale.ROOT))
                 .anyMatch(url -> url.contains("hcaptcha.com") || url.contains("captcha"));
 
-        if (challengeText || challengeFrame) {
+        return challengeText || challengeFrame;
+    }
+
+    private static void handleSecurityChallenge(Page page, boolean headed) {
+        if (!isSecurityChallengeVisible(page)) return;
+
+        if (headed && Boolean.getBoolean("manualVerification")) {
+            System.out.println();
+            System.out.println("ING security verification detected.");
+            System.out.println("Complete the verification manually in the browser window.");
+            System.out.println("When the page returns to ING, click Resume in Playwright Inspector.");
+            System.out.println("The test will then continue with the cookie consent scenario.");
+            System.out.println();
+
+            page.pause();
+
+            if (isSecurityChallengeVisible(page)) {
+                throw new AssertionError(
+                        "The security verification is still visible after resuming Playwright Inspector. "
+                        + "Complete the check in the browser before pressing Resume. Current URL: " + page.url());
+            }
+            return;
+        }
+
+        throw new AssertionError(
+                "ING displayed an anti-bot verification page (hCaptcha / 'Jestem człowiekiem') "
+                + "instead of the cookie consent banner. For a local manual run, use "
+                + "-Dheaded=true -DmanualVerification=true. The test does not solve or bypass CAPTCHA. "
+                + "Current URL: " + page.url());
+    }
+
+    private static void assertNoSecurityChallenge(Page page) {
+        if (isSecurityChallengeVisible(page)) {
             throw new AssertionError(
-                    "ING displayed an anti-bot verification page (hCaptcha / 'Jestem człowiekiem') "
-                    + "instead of the cookie consent banner. The test does not solve or bypass CAPTCHA. "
-                    + "Run it from an ING-approved network/self-hosted runner or use an approved test environment. "
-                    + "Current URL: " + page.url());
+                    "ING displayed an anti-bot verification page during the cookie consent scenario. "
+                    + "The test does not solve or bypass CAPTCHA. Current URL: " + page.url());
         }
     }
 
