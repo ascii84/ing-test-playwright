@@ -40,7 +40,6 @@ final class CookieConsentPage {
 
     void acceptAnalyticsOnly() {
         checkForCaptcha();
-
         clickText(CUSTOMIZE);
         setCategory(ANALYTICS, true);
         setCategory(MARKETING, false);
@@ -66,12 +65,12 @@ final class CookieConsentPage {
     }
 
     private void clickText(Pattern text) {
-        Locator control = waitForText(text);
-        control.click();
+        waitForText(text).click();
     }
 
     private void setCategory(Pattern category, boolean enabled) {
-        long endTime = System.nanoTime() + Duration.ofSeconds(15).toNanos();
+        int timeoutSeconds = category == MARKETING ? 3 : 15;
+        long endTime = System.nanoTime() + Duration.ofSeconds(timeoutSeconds).toNanos();
 
         while (System.nanoTime() < endTime) {
             for (Frame frame : page.frames()) {
@@ -83,7 +82,6 @@ final class CookieConsentPage {
                     if (currentState == null) {
                         throw new AssertionError("Cookie switch has no aria-checked attribute: " + category);
                     }
-
                     if (Boolean.parseBoolean(currentState) != enabled) {
                         toggle.click();
                     }
@@ -100,7 +98,6 @@ final class CookieConsentPage {
                     return;
                 }
             }
-
             page.waitForTimeout(250);
         }
 
@@ -121,7 +118,6 @@ final class CookieConsentPage {
                     return locator;
                 }
             }
-
             page.waitForTimeout(250);
         }
 
