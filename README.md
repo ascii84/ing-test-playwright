@@ -164,12 +164,6 @@ mvn test -Dbrowser=webkit
 
 Dozwolone wartości właściwości `browser`: `all` (domyślnie), `chromium`, `firefox`, `webkit`.
 
-## Pipeline – GitHub Actions
-
-Workflow znajduje się w `.github/workflows/cross-browser.yml`. Najpierw job `prepare` pobiera zależności Maven i Playwright CLI jeden raz, aby uniknąć równoczesnego odpytywania Maven Central przez trzy joby (w poprzednim uruchomieniu Maven Central zwrócił HTTP 429). Następnie macierz z trzema wartościami `chromium`, `firefox`, `webkit` uruchamia osobny job dla każdej przeglądarki. `max-parallel: 3` pozwala wykonywać je jednocześnie, a `fail-fast: false` nie przerywa pozostałych jobów po błędzie jednej przeglądarki. Każdy job instaluje tylko biblioteki systemowe i binaria wybranej przeglądarki (np. job Chromium nie pobiera ciężkich zależności WebKit/GStreamer). Runner jest przypięty do `ubuntu-24.04`, a job E2E ma limit 20 minut. CLI Playwright jest wywoływane pełną współrzędną Maven pluginu, bez dynamicznego wyszukiwania prefiksu `exec`.
-
-Workflow uruchamia się po `push`, `pull_request` oraz ręcznie przez `workflow_dispatch`. Raporty Surefire i screenshoty błędów są publikowane jako artefakty. Przed instalacją binariów workflow wykonuje osobny krok `install-deps`, który instaluje systemowe biblioteki dla wszystkich silników Playwright. Następnie pobierane są przeglądarki. Są to kroki zgodne z oficjalną instrukcją Playwright Java.
-
 ## Wzorzec Page Object Model
 
 Klasa `CookieConsentPage` enkapsuluje nawigację po stronie ING, obsługę ewentualnej ręcznej weryfikacji oraz interakcje z banerem zgód. `CookieConsentTest` pozostaje klasą testową: konfiguruje przeglądarkę, wywołuje metody Page Objectu i weryfikuje zapisane cookies. Projekt używa wyłącznie Playwright Java (bez Selenium i TypeScript).
@@ -201,11 +195,17 @@ Klasa `CookieConsentPage` enkapsuluje nawigację po stronie ING, obsługę ewent
 - Maksymalna równoległość lokalna wynosi trzy testy (JUnit 5).
 - Przy błędzie zapisywany jest screenshot do `target/screenshots/`.
 
-## Ograniczenie bezpieczeństwa ING (hCaptcha)
+## Uruchamianie lokalne i ograniczenie hCaptcha
 
-ING może pokazać stronę ochronną „Dlaczego widzisz tę stronę?” z weryfikacją „Jestem człowiekiem” zamiast właściwej strony. W szczególności publiczne adresy IP runnerów CI mogą zostać potraktowane jako nietypowe źródło ruchu. W takim przypadku test kończy się czytelnym błędem i zapisuje screenshot. Test celowo nie rozwiązuje ani nie obchodzi CAPTCHA.
+Projekt jest przeznaczony do uruchamiania lokalnie na komputerze użytkownika. Nie uruchamiamy testów w GitHub Actions, ponieważ publiczne adresy IP runnerów CI mogą być blokowane przez zabezpieczenia ING.
 
-Aby uruchomić pełny scenariusz E2E, użyj sieci/runnera dopuszczonego przez ING (np. self-hosted GitHub Actions runner w zaufanej sieci) albo uzgodnionego środowiska testowego. W workflow można ustawić zmienną repozytorium `ING_RUNNER=self-hosted`; domyślnie używany jest `ubuntu-24.04`. Dla prawdziwej równoległości na self-hosted potrzebne są trzy dostępne sloty/instancje runnera.
+Zalecane uruchomienie to widoczna przeglądarka Chromium:
+
+```bash
+mvn -Dbrowser=chromium -Dheaded=true test
+```
+
+Tryb `headed` otwiera normalne okno przeglądarki na komputerze użytkownika. Nie wyłącza zabezpieczeń ING i nie omija CAPTCHA. Jeżeli ING wyświetli weryfikację, test nie będzie jej automatycznie rozwiązywał; należy ją przejść ręcznie w oknie przeglądarki, a następnie uruchomić test ponownie. To, czy ING pokaże CAPTCHA, zależy od bieżącej oceny ruchu przez serwis — samo uruchomienie lokalne nie gwarantuje jej braku.
 
 ## Ważna uwaga
 
