@@ -136,23 +136,15 @@ mvn clean test
 
 Domyślnie trzy przeglądarki uruchamiane są równolegle. Każda iteracja testu tworzy własną instancję Playwright, przeglądarkę i czysty `BrowserContext`; cookies nie są współdzielone.
 
-### Ręczne przejście weryfikacji ING (widoczna przeglądarka)
+### Uruchomienie lokalne w widocznej przeglądarce
 
-Jeżeli ING wyświetla hCaptcha, możesz uruchomić pojedynczy test Chromium lokalnie w trybie headed. Playwright pokaże okno przeglądarki i zatrzyma wykonanie w Playwright Inspector. Wykonaj weryfikację samodzielnie w oknie przeglądarki, a następnie kliknij **Resume** w Inspectorze. Test sprawdzi, czy ekran ochronny zniknął i będzie kontynuował scenariusz cookies.
-
-Najpierw pobierz samo Chromium:
+Aby uruchomić pojedynczy test Chromium w normalnym, widocznym oknie przeglądarki:
 
 ```bash
-mvn -B -DskipTests org.codehaus.mojo:exec-maven-plugin:3.5.0:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium"
+mvn -Dbrowser=chromium -Dheaded=true test
 ```
 
-Następnie uruchom widoczny test:
-
-```bash
-mvn -Dbrowser=chromium -Dheaded=true -DmanualVerification=true test
-```
-
-Ten tryb wymaga komputera z interfejsem graficznym. Nie uruchamiaj go na GitHub-hosted runnerze. Test nie automatyzuje rozwiązywania CAPTCHA — człowiek wykonuje tę czynność, a Playwright jedynie wznawia scenariusz po ręcznym potwierdzeniu.
+W trybie `headed` Playwright otwiera przeglądarkę na ekranie i pomija sprawdzanie, czy ING wyświetlił stronę CAPTCHA. Nie zatrzymuje testu w Playwright Inspector. To ustawienie nie omija ani nie rozwiązuje CAPTCHA — jeśli ING pokaże weryfikację, dalsze znalezienie banera cookies może się nie udać. W trybie domyślnym (headless) pozostaje kontrola wykrywająca ekran antybotowy i zgłaszająca czytelny błąd.
 
 ### Uruchomienie tylko w jednej przeglądarce
 
@@ -180,6 +172,7 @@ Workflow uruchamia się po `push`, `pull_request` oraz ręcznie przez `workflow_
 ├── src/
 │   └── test/
 │       ├── java/pl/ing/automation/
+│       │   ├── CookieConsentPage.java
 │       │   └── CookieConsentTest.java
 │       └── resources/
 │           └── junit-platform.properties
