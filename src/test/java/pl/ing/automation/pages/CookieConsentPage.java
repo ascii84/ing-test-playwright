@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Page Object for the ING cookie consent banner.
+ * Obiekt strony reprezentujący baner zgody na pliki cookie ING.
  */
 public final class CookieConsentPage {
 
@@ -55,7 +55,7 @@ public final class CookieConsentPage {
     }
 
     private void checkForCaptcha() {
-        // In local headed mode the user can inspect the page manually.
+        // W lokalnym trybie z widoczną przeglądarką użytkownik może sam sprawdzić stronę.
         if (Boolean.getBoolean("headed")) {
             return;
         }
@@ -73,7 +73,7 @@ public final class CookieConsentPage {
                                     + ", page text: " + shorten(frameText));
                 }
             } catch (TimeoutError ignored) {
-                // An empty or still-loading frame may not have a body yet.
+                // Pusta lub wciąż ładująca się ramka może jeszcze nie mieć treści.
             }
         }
 
@@ -161,7 +161,7 @@ public final class CookieConsentPage {
                     texts.add(shorten(value));
                 }
             } catch (RuntimeException ignored) {
-                // Keep diagnostics from the frames that are accessible.
+                // Zachowaj diagnostykę z tych ramek, do których można uzyskać dostęp.
             }
         }
         return texts.toString();
