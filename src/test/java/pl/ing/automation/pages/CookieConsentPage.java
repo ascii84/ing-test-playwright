@@ -21,7 +21,7 @@ public final class CookieConsentPage {
     private static final Pattern MARKETING =
             Pattern.compile("Marketing", Pattern.CASE_INSENSITIVE);
     private static final Pattern SAVE =
-            Pattern.compile("Akceptuj wybrane|Zapisz wybrane|Zapisz ustawienia",
+            Pattern.compile("Zaakceptuj zaznaczone",
                     Pattern.CASE_INSENSITIVE);
     private static final Pattern CAPTCHA =
             Pattern.compile("Jestem człowiekiem|Dlaczego widzisz tę stronę|Verify you are human",
