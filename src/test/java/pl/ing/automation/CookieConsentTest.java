@@ -32,6 +32,9 @@ class CookieConsentTest {
     private static final Pattern CUSTOMIZE = Pattern.compile("dostosuj|ustawienia", Pattern.CASE_INSENSITIVE);
     private static final Pattern ANALYTICS = Pattern.compile("anality|statyst", Pattern.CASE_INSENSITIVE);
     private static final Pattern MARKETING = Pattern.compile("marketing", Pattern.CASE_INSENSITIVE);
+    private static final Pattern SECURITY_CHALLENGE = Pattern.compile(
+            "dlaczego widzisz t[eę] stron[eę]|jestem cz[łl]owiekiem|i am human|verify you are human",
+            Pattern.CASE_INSENSITIVE);
     private static final Pattern ACCEPT_SELECTED = Pattern.compile(
             "akceptuj wybrane|zaakceptuj wybrane|zapisz wybrane|zapisz moje wybory|zapisz ustawienia|zapisz wyb[oó]r|akceptuj zaznaczone",
             Pattern.CASE_INSENSITIVE);
@@ -75,6 +78,9 @@ class CookieConsentTest {
                     .setWaitUntil(WaitUntilState.DOMCONTENTLOADED)
                     .setTimeout(60_000));
 
+            // ING may show an anti-bot interstitial to public CI IP ranges instead of the cookie banner.
+            // We explicitly detect it and stop; CAPTCHA solving or bypassing is intentionally not automated.
+            assertNoSecurityChallenge(page);
             clickVisibleControl(page, CUSTOMIZE, "Dostosuj");
             setCategoryState(page, ANALYTICS, true, true);
             // Marketing is deliberately left disabled when this optional category is present.
@@ -136,9 +142,35 @@ class CookieConsentTest {
         };
     }
 
+    private static void assertNoSecurityChallenge(Page page) {
+        String bodyText = "";
+        try {
+            bodyText = page.locator("body").innerText();
+        } catch (RuntimeException ignored) {
+            // Page may still be transitioning; frame checks below are also useful.
+        }
+
+        boolean challengeText = SECURITY_CHALLENGE.matcher(bodyText).find();
+        boolean challengeFrame = page.frames().stream()
+                .map(Frame::url)
+                .filter(Objects::nonNull)
+                .map(url -> url.toLowerCase(Locale.ROOT))
+                .anyMatch(url -> url.contains("hcaptcha.com") || url.contains("captcha"));
+
+        if (challengeText || challengeFrame) {
+            throw new AssertionError(
+                    "ING displayed an anti-bot verification page (hCaptcha / 'Jestem człowiekiem') "
+                    + "instead of the cookie consent banner. The test does not solve or bypass CAPTCHA. "
+                    + "Run it from an ING-approved network/self-hosted runner or use an approved test environment. "
+                    + "Current URL: " + page.url());
+        }
+    }
+
     private static void clickVisibleControl(Page page, Pattern name, String description) {
         long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
         while (System.nanoTime() < deadline) {
+            assertNoSecurityChallenge(page);
+
             for (Frame frame : new ArrayList<>(page.frames())) {
                 try {
                     Locator button = frame.getByRole(AriaRole.BUTTON,
@@ -147,6 +179,14 @@ class CookieConsentTest {
                         button.click();
                         return;
                     }
+
+                    Locator link = frame.getByRole(AriaRole.LINK,
+                            new Frame.GetByRoleOptions().setName(name)).first();
+                    if (link.count() > 0 && link.isVisible()) {
+                        link.click();
+                        return;
+                    }
+
                     Locator text = frame.getByText(name).first();
                     if (text.count() > 0 && text.isVisible()) {
                         text.click();
@@ -158,7 +198,28 @@ class CookieConsentTest {
             }
             page.waitForTimeout(250);
         }
-        throw new AssertionError("Could not find visible control: " + description);
+
+        String title;
+        String bodyPreview;
+        try {
+            title = page.title();
+        } catch (RuntimeException ignored) {
+            title = "<unavailable>";
+        }
+        try {
+            bodyPreview = page.locator("body").innerText();
+            bodyPreview = bodyPreview.replaceAll("\\s+", " ").trim();
+            if (bodyPreview.length() > 500) bodyPreview = bodyPreview.substring(0, 500) + "...";
+        } catch (RuntimeException ignored) {
+            bodyPreview = "<unavailable>";
+        }
+        String frameUrls = page.frames().stream().map(Frame::url).toList().toString();
+
+        throw new AssertionError("Could not find visible control: " + description
+                + ". URL=" + page.url()
+                + ", title=" + title
+                + ", visible page text=" + bodyPreview
+                + ", frames=" + frameUrls);
     }
 
     private static void setCategoryState(Page page, Pattern category, boolean desired, boolean required) {
