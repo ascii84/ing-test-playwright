@@ -2,9 +2,9 @@ package pl.ing.automation.pages;
 
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.options.WaitForSelectorState;
 import com.microsoft.playwright.options.WaitUntilState;
 
-import java.time.Duration;
 import java.util.regex.Pattern;
 
 /**
@@ -65,65 +65,59 @@ public final class CookieConsentPage {
     }
 
     private void clickButton(Pattern name) {
-        waitForButton(name).click();
-    }
+        checkForCaptcha();
 
-    private Locator waitForButton(Pattern name) {
-        long endTime = System.nanoTime() + Duration.ofSeconds(30).toNanos();
-
-        while (System.nanoTime() < endTime) {
-            checkForCaptcha();
-
-            for (Frame frame : page.frames()) {
-                Locator button = frame.getByRole(AriaRole.BUTTON,
-                        new Frame.GetByRoleOptions().setName(name)).first();
-
-                if (button.count() > 0 && button.isVisible()) {
-                    return button;
-                }
+        for (Frame frame : page.frames()) {
+            Locator button = findVisible(frame, AriaRole.BUTTON, name);
+            if (button != null) {
+                button.click();
+                return;
             }
-
-            page.waitForTimeout(250);
         }
 
-        throw new AssertionError("Could not find visible button: " + name);
+        throw new AssertionError("Could not find button: " + name);
     }
 
     private void setCategory(Pattern category, boolean enabled) {
-        int timeoutSeconds = category == MARKETING ? 3 : 15;
-        long endTime = System.nanoTime() + Duration.ofSeconds(timeoutSeconds).toNanos();
+        for (Frame frame : page.frames()) {
+            Locator toggle = findVisible(frame, AriaRole.SWITCH, category);
 
-        while (System.nanoTime() < endTime) {
-            for (Frame frame : page.frames()) {
-                Locator toggle = frame.getByRole(AriaRole.SWITCH,
-                        new Frame.GetByRoleOptions().setName(category)).first();
-
-                if (toggle.count() > 0 && toggle.isVisible()) {
-                    String currentState = toggle.getAttribute("aria-checked");
-                    if (currentState == null) {
-                        throw new AssertionError("Cookie switch has no aria-checked attribute: " + category);
-                    }
-                    if (Boolean.parseBoolean(currentState) != enabled) {
-                        toggle.click();
-                    }
-                    return;
+            if (toggle != null) {
+                String currentState = toggle.getAttribute("aria-checked");
+                if (currentState == null) {
+                    throw new AssertionError("Cookie switch has no aria-checked attribute: " + category);
                 }
-
-                Locator checkbox = frame.getByRole(AriaRole.CHECKBOX,
-                        new Frame.GetByRoleOptions().setName(category)).first();
-
-                if (checkbox.count() > 0 && checkbox.isVisible()) {
-                    if (checkbox.isChecked() != enabled) {
-                        checkbox.setChecked(enabled);
-                    }
-                    return;
+                if (Boolean.parseBoolean(currentState) != enabled) {
+                    toggle.click();
                 }
+                return;
             }
-            page.waitForTimeout(250);
+
+            Locator checkbox = findVisible(frame, AriaRole.CHECKBOX, category);
+            if (checkbox != null) {
+                if (checkbox.isChecked() != enabled) {
+                    checkbox.setChecked(enabled);
+                }
+                return;
+            }
         }
 
         if (category == ANALYTICS) {
             throw new AssertionError("Could not find the analytics cookie setting.");
+        }
+    }
+
+    private Locator findVisible(Frame frame, AriaRole role, Pattern name) {
+        Locator locator = frame.getByRole(role,
+                new Frame.GetByRoleOptions().setName(name)).first();
+
+        try {
+            locator.waitFor(new Locator.WaitForOptions()
+                    .setState(WaitForSelectorState.VISIBLE)
+                    .setTimeout(1000));
+            return locator;
+        } catch (TimeoutError ignored) {
+            return null;
         }
     }
 }
