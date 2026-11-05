@@ -12,8 +12,10 @@ permissions:
 jobs:
   e2e:
     name: E2E / ${{ matrix.browser }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Set repository variable ING_RUNNER=self-hosted to use a runner on an
+    # ING-approved/trusted network. Defaults to GitHub-hosted Linux runners.
+    runs-on: ${{ vars.ING_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       max-parallel: 3
@@ -22,27 +24,38 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
 
-      - name: Install Playwright browser and OS dependencies
+      - name: Install Maven project dependencies
+        run: mvn -B -DskipTests test-compile
+
+      # Install OS packages for every Playwright browser engine. Keeping this
+      # separate from browser downloads makes missing Linux libraries explicit.
+      - name: Install Linux dependencies for Chromium, Firefox and WebKit
         run: >-
           mvn -B -DskipTests exec:java
           -Dexec.mainClass=com.microsoft.playwright.CLI
-          -Dexec.args="install --with-deps ${{ matrix.browser }}"
+          -Dexec.args="install-deps"
+
+      - name: Install Playwright browsers
+        run: >-
+          mvn -B -DskipTests exec:java
+          -Dexec.mainClass=com.microsoft.playwright.CLI
+          -Dexec.args="install"
 
       - name: Run E2E test
         run: mvn -B -Dbrowser=${{ matrix.browser }} test
 
       - name: Upload test reports and failure screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-results-${{ matrix.browser }}
           if-no-files-found: ignore
