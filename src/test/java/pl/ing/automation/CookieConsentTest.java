@@ -66,7 +66,7 @@ class CookieConsentTest {
 
             CookieConsentPage cookieConsentPage = new CookieConsentPage(page);
             cookieConsentPage.open();
-            cookieConsentPage.configureAnalyticsOnly(headed);
+            cookieConsentPage.configureAnalyticsOnly();
             cookieConsentPage.reload();
 
             List<Cookie> cookies = waitForCookies(context, page,
