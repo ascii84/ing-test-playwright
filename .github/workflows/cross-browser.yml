@@ -10,8 +10,32 @@ permissions:
   contents: read
 
 jobs:
+  prepare:
+    name: Prepare Maven cache
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Java 21 and cache Maven dependencies
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # Resolve Maven plugins/dependencies once before starting the matrix.
+      # This avoids three fresh runners hitting Maven Central at the same time.
+      - name: Pre-resolve project and Playwright CLI dependencies
+        run: |
+          mvn -B -DskipTests test
+          mvn -B -DskipTests org.codehaus.mojo:exec-maven-plugin:3.5.0:java \
+            -Dexec.mainClass=com.microsoft.playwright.CLI \
+            -Dexec.args="--help"
+
   e2e:
     name: E2E / ${{ matrix.browser }}
+    needs: prepare
     # Set repository variable ING_RUNNER=self-hosted to use a runner on an
     # ING-approved/trusted network. Defaults to GitHub-hosted Linux runners.
     runs-on: ${{ vars.ING_RUNNER || 'ubuntu-latest' }}
@@ -26,27 +50,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Set up Java 21
+      - name: Set up Java 21 and restore Maven cache
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
 
-      - name: Install Maven project dependencies
-        run: mvn -B -DskipTests test-compile
-
-      # Install OS packages for every Playwright browser engine. Keeping this
-      # separate from browser downloads makes missing Linux libraries explicit.
-      - name: Install Linux dependencies for Chromium, Firefox and WebKit
+      # Explicitly install Linux packages for all three Playwright engines.
+      - name: Install Linux browser dependencies
         run: >-
-          mvn -B -DskipTests exec:java
+          mvn -B -DskipTests
+          org.codehaus.mojo:exec-maven-plugin:3.5.0:java
           -Dexec.mainClass=com.microsoft.playwright.CLI
           -Dexec.args="install-deps"
 
-      - name: Install Playwright browsers
+      - name: Install Playwright browser binaries
         run: >-
-          mvn -B -DskipTests exec:java
+          mvn -B -DskipTests
+          org.codehaus.mojo:exec-maven-plugin:3.5.0:java
           -Dexec.mainClass=com.microsoft.playwright.CLI
           -Dexec.args="install"
 
