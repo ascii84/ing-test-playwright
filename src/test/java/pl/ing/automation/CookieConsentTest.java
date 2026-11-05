@@ -202,7 +202,7 @@ class CookieConsentTest {
     private static void clickVisibleControl(Page page, Pattern name, String description) {
         long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
         while (System.nanoTime() < deadline) {
-            assertNoSecurityChallenge(page);
+            handleSecurityChallenge(page, Boolean.getBoolean("headed"));
 
             for (Frame frame : new ArrayList<>(page.frames())) {
                 try {
