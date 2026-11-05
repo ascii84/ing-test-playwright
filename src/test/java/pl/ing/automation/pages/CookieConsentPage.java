@@ -15,8 +15,8 @@ public final class CookieConsentPage {
     private static final String URL = "https://www.ing.pl/";
 
     private static final String CUSTOMIZE = "Dostosuj";
-    private static final String ANALYTICS = "Anality";
-    private static final String MARKETING = "Marketing";
+    private static final String ANALYTICAL = "Analityczne";
+    private static final String MARKETING = "Marketingowe";
     private static final String SAVE = "Zaakceptuj zaznaczone";
 
     private final Page page;
@@ -33,7 +33,7 @@ public final class CookieConsentPage {
     public void acceptAnalyticsOnly() {
         checkForCaptcha();
         clickButton(CUSTOMIZE);
-        setCategory(ANALYTICS, true);
+        setCategory(ANALYTICAL, true);
         setCategory(MARKETING, false);
         clickButton(SAVE);
     }
