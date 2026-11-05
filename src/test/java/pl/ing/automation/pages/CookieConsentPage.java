@@ -32,7 +32,7 @@ public final class CookieConsentPage {
 
     public void acceptAnalyticsOnly() {
         checkForCaptcha();
-        clickButton(CUSTOMIZE);
+        clickText(CUSTOMIZE);
         setCategory(ANALYTICAL, true);
         setCategory(MARKETING, false);
         clickButton(SAVE);
@@ -80,6 +80,27 @@ public final class CookieConsentPage {
                 // Pusta lub wciąż ładująca się ramka może jeszcze nie mieć treści.
             }
         }
+    }
+
+    private void clickText(String text) {
+        checkForCaptcha();
+
+        for (Frame frame : page.frames()) {
+            Locator link = frame.getByText(text,
+                    new Frame.GetByTextOptions().setExact(true)).first();
+
+            if (link.count() > 0) {
+                link.click();
+                return;
+            }
+        }
+
+        checkForCaptcha();
+        throw new AssertionError("Could not find text: " + text
+                + ". Page URL: " + page.url()
+                + ". Page title: " + page.title()
+                + ". Frame URLs: " + frameUrls()
+                + ". Page text: " + pageText());
     }
 
     private void clickButton(String name) {
