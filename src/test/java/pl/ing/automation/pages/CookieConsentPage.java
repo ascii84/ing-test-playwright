@@ -102,9 +102,7 @@ public final class CookieConsentPage {
             }
         }
 
-        if (category == ANALYTICS) {
-            throw new AssertionError("Could not find the analytics cookie setting.");
-        }
+        throw new AssertionError("Could not find cookie setting: " + category);
     }
 
     private Locator findVisible(Frame frame, AriaRole role, Pattern name) {
