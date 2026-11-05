@@ -1,0 +1,51 @@
+name: ING cookie consent - cross browser
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: E2E / ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        browser: [ chromium, firefox, webkit ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Install Playwright browser and OS dependencies
+        run: >-
+          mvn -B -DskipTests exec:java
+          -Dexec.mainClass=com.microsoft.playwright.CLI
+          -Dexec.args="install --with-deps ${{ matrix.browser }}"
+
+      - name: Run E2E test
+        run: mvn -B -Dbrowser=${{ matrix.browser }} test
+
+      - name: Upload test reports and failure screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.browser }}
+          if-no-files-found: ignore
+          path: |
+            target/surefire-reports/**
+            target/screenshots/**
