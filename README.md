@@ -54,7 +54,7 @@ Dozwolone wartości właściwości `browser`: `all` (domyślnie), `chromium`, `f
 
 Workflow znajduje się w `.github/workflows/cross-browser.yml`. Wykorzystuje strategię macierzy z trzema wartościami: `chromium`, `firefox`, `webkit`. GitHub Actions uruchamia osobny job dla każdej przeglądarki na oddzielnym runnerze. `max-parallel: 3` pozwala wykonywać wszystkie trzy joby jednocześnie, a `fail-fast: false` nie przerywa pozostałych jobów po błędzie jednej przeglądarki.
 
-Workflow uruchamia się po `push`, `pull_request` oraz ręcznie przez `workflow_dispatch`. Raporty Surefire i screenshoty błędów są publikowane jako artefakty.
+Workflow uruchamia się po `push`, `pull_request` oraz ręcznie przez `workflow_dispatch`. Raporty Surefire i screenshoty błędów są publikowane jako artefakty. Przed instalacją binariów workflow wykonuje osobny krok `install-deps`, który instaluje systemowe biblioteki dla wszystkich silników Playwright. Następnie pobierane są przeglądarki. Są to kroki zgodne z oficjalną instrukcją Playwright Java.
 
 ## Struktura projektu
 
@@ -82,6 +82,19 @@ Workflow uruchamia się po `push`, `pull_request` oraz ręcznie przez `workflow_
 - Maksymalna równoległość lokalna wynosi trzy testy (JUnit 5).
 - Przy błędzie zapisywany jest screenshot do `target/screenshots/`.
 
+## Ograniczenie bezpieczeństwa ING (hCaptcha)
+
+ING może pokazać stronę ochronną „Dlaczego widzisz tę stronę?” z weryfikacją „Jestem człowiekiem” zamiast właściwej strony. W szczególności publiczne adresy IP runnerów CI mogą zostać potraktowane jako nietypowe źródło ruchu. W takim przypadku test kończy się czytelnym błędem i zapisuje screenshot. Test celowo nie rozwiązuje ani nie obchodzi CAPTCHA.
+
+Aby uruchomić pełny scenariusz E2E, użyj sieci/runnera dopuszczonego przez ING (np. self-hosted GitHub Actions runner w zaufanej sieci) albo uzgodnionego środowiska testowego. W workflow można ustawić zmienną repozytorium `ING_RUNNER=self-hosted`; domyślnie używany jest `ubuntu-latest`. Dla prawdziwej równoległości na self-hosted potrzebne są trzy dostępne sloty/instancje runnera.
+
 ## Ważna uwaga
 
 To test E2E publicznej strony ING, a nie kontrolowanej aplikacji testowej. Wynik zależy również od dostępności serwisu, sieci, skryptów zewnętrznych i aktualnej implementacji banera zgód. Jeżeli ING zmieni dostawcę analityki albo nazwy cookies, selektory i asercje wymagają aktualizacji.
+
+Na Ubuntu/Linux lokalnie zainstaluj zależności systemowe i przeglądarki:
+
+```bash
+mvn -B -DskipTests exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install-deps"
+mvn -B -DskipTests exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install"
+```
