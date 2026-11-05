@@ -36,8 +36,8 @@ final class CookieConsentPage {
                 .setTimeout(60_000));
     }
 
-    void configureAnalyticsOnly(boolean headed) {
-        handleSecurityChallenge(headed);
+    void configureAnalyticsOnly() {
+        handleSecurityChallenge();
         clickVisibleControl(CUSTOMIZE, "Dostosuj");
         setCategoryState(ANALYTICS, true, true);
         // Marketing is deliberately left disabled when this optional category is present.
@@ -68,25 +68,10 @@ final class CookieConsentPage {
         return challengeText || challengeFrame;
     }
 
-    private void handleSecurityChallenge(boolean headed) {
-        if (!isSecurityChallengeVisible()) return;
-
-        if (headed && Boolean.getBoolean("manualVerification")) {
-            System.out.println();
-            System.out.println("ING security verification detected.");
-            System.out.println("Complete the verification manually in the browser window.");
-            System.out.println("When the page returns to ING, click Resume in Playwright Inspector.");
-            System.out.println("The test will then continue with the cookie consent scenario.");
-            System.out.println();
-            page.pause();
-
-            if (isSecurityChallengeVisible()) {
-                throw new AssertionError(
-                        "The security verification is still visible after resuming Playwright Inspector. "
-                        + "Complete the check in the browser before pressing Resume. Current URL: " + page.url());
-            }
-            return;
-        }
+    private void handleSecurityChallenge() {
+        // In headed local runs the user can inspect the page directly; do not pause in Playwright Inspector.
+        // Keep explicit anti-bot detection for headless CI, where the test cannot proceed without intervention.
+        if (Boolean.getBoolean("headed") || !isSecurityChallengeVisible()) return;
 
         throw new AssertionError(
                 "ING displayed an anti-bot verification page (hCaptcha / 'Jestem człowiekiem') "
@@ -98,7 +83,7 @@ final class CookieConsentPage {
     private void clickVisibleControl(Pattern name, String description) {
         long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
         while (System.nanoTime() < deadline) {
-            handleSecurityChallenge(Boolean.getBoolean("headed"));
+            handleSecurityChallenge();
 
             for (Frame frame : new ArrayList<>(page.frames())) {
                 try {
