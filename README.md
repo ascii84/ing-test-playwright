@@ -1,2 +1,87 @@
-# ing-test-playwright
-Test na potrzeby rekrutacji 
+# ING – test zgody na cookies (Java + Playwright)
+
+Projekt automatyzuje scenariusz rekrutacyjny sprawdzający zapis zgody na cookies analityczne na stronie [https://www.ing.pl](https://www.ing.pl).
+
+## Zakres testu
+
+1. Otwiera stronę ING w nowym, odizolowanym kontekście przeglądarki.
+2. W banerze cookies wybiera **Dostosuj**.
+3. Włącza kategorię cookies analitycznych.
+4. Pozostawia kategorię marketingową wyłączoną.
+5. Zapisuje wybór przyciskiem **Akceptuj wybrane** (uwzględnione są też typowe warianty tekstu).
+6. Odświeża stronę, aby sprawdzić trwałość zapisanej decyzji.
+7. Odczytuje cookies z kontekstu Playwrighta i sprawdza:
+   - `cookiePolicyGDPR` – cookie decyzji dotyczącej zgód,
+   - `cookiePolicyGDPR__details` – cookie szczegółów decyzji,
+   - co najmniej jedno znane cookie analityczne, np. `_ga`, `_gid`, `_ga_*`, `s_vi_*`, `s_cc`, `s_fid`, `Gdyn`, `AMCV_*` lub `AMCVS_*`,
+   - brak znanych cookies marketingowych `cookieSEG`, `cookieSEG__details` i `GAD`.
+
+Nazwy cookies należy okresowo weryfikować z aktualną [Polityką plików cookie ING](https://www.ing.pl/indywidualni/tabele-i-regulaminy/regulacje/polityka-plikow-cookie), ponieważ dostawca CMP lub narzędzia analityczne mogą się zmienić.
+
+## Wymagania
+
+- Java 21+
+- Maven 3.9+
+- Połączenie z internetem (strona ING i pobranie binariów przeglądarek Playwright)
+
+## Uruchomienie lokalne
+
+W katalogu projektu wykonaj:
+
+```bash
+# Instalacja przeglądarek Playwright
+mvn -B -DskipTests exec:java \
+  -Dexec.mainClass=com.microsoft.playwright.CLI \
+  -Dexec.args="install"
+
+# Uruchomienie testu w Chromium, Firefox i WebKit
+mvn clean test
+```
+
+Domyślnie trzy przeglądarki uruchamiane są równolegle. Każda iteracja testu tworzy własną instancję Playwright, przeglądarkę i czysty `BrowserContext`; cookies nie są współdzielone.
+
+### Uruchomienie tylko w jednej przeglądarce
+
+```bash
+mvn test -Dbrowser=chromium
+mvn test -Dbrowser=firefox
+mvn test -Dbrowser=webkit
+```
+
+Dozwolone wartości właściwości `browser`: `all` (domyślnie), `chromium`, `firefox`, `webkit`.
+
+## Pipeline – GitHub Actions
+
+Workflow znajduje się w `.github/workflows/cross-browser.yml`. Wykorzystuje strategię macierzy z trzema wartościami: `chromium`, `firefox`, `webkit`. GitHub Actions uruchamia osobny job dla każdej przeglądarki na oddzielnym runnerze. `max-parallel: 3` pozwala wykonywać wszystkie trzy joby jednocześnie, a `fail-fast: false` nie przerywa pozostałych jobów po błędzie jednej przeglądarki.
+
+Workflow uruchamia się po `push`, `pull_request` oraz ręcznie przez `workflow_dispatch`. Raporty Surefire i screenshoty błędów są publikowane jako artefakty.
+
+## Struktura projektu
+
+```text
+.
+├── .github/
+│   └── workflows/
+│       └── cross-browser.yml
+├── src/
+│   └── test/
+│       ├── java/pl/ing/automation/
+│       │   └── CookieConsentTest.java
+│       └── resources/
+│           └── junit-platform.properties
+├── .gitignore
+├── pom.xml
+└── README.md
+```
+
+## Powtarzalność i diagnostyka
+
+- Każdy test zaczyna się w nowym `BrowserContext`, bez cookies z poprzedniego uruchomienia.
+- Jawnie ustawione są locale `pl-PL`, strefa `Europe/Warsaw`, viewport i timeouty.
+- Test nie używa stałych opóźnień do synchronizacji; ponawia wyszukiwanie elementów i oczekuje na warunek pojawienia się cookies.
+- Maksymalna równoległość lokalna wynosi trzy testy (JUnit 5).
+- Przy błędzie zapisywany jest screenshot do `target/screenshots/`.
+
+## Ważna uwaga
+
+To test E2E publicznej strony ING, a nie kontrolowanej aplikacji testowej. Wynik zależy również od dostępności serwisu, sieci, skryptów zewnętrznych i aktualnej implementacji banera zgód. Jeżeli ING zmieni dostawcę analityki albo nazwy cookies, selektory i asercje wymagają aktualizacji.
