@@ -52,7 +52,7 @@ Dozwolone wartości właściwości `browser`: `all` (domyślnie), `chromium`, `f
 
 ## Pipeline – GitHub Actions
 
-Workflow znajduje się w `.github/workflows/cross-browser.yml`. Wykorzystuje strategię macierzy z trzema wartościami: `chromium`, `firefox`, `webkit`. GitHub Actions uruchamia osobny job dla każdej przeglądarki na oddzielnym runnerze. `max-parallel: 3` pozwala wykonywać wszystkie trzy joby jednocześnie, a `fail-fast: false` nie przerywa pozostałych jobów po błędzie jednej przeglądarki.
+Workflow znajduje się w `.github/workflows/cross-browser.yml`. Najpierw job `prepare` pobiera zależności Maven i Playwright CLI jeden raz, aby uniknąć równoczesnego odpytywania Maven Central przez trzy joby (w poprzednim uruchomieniu Maven Central zwrócił HTTP 429). Następnie macierz z trzema wartościami `chromium`, `firefox`, `webkit` uruchamia osobny job dla każdej przeglądarki. `max-parallel: 3` pozwala wykonywać je jednocześnie, a `fail-fast: false` nie przerywa pozostałych jobów po błędzie jednej przeglądarki. CLI Playwright jest wywoływane pełną współrzędną Maven pluginu, bez dynamicznego wyszukiwania prefiksu `exec`.
 
 Workflow uruchamia się po `push`, `pull_request` oraz ręcznie przez `workflow_dispatch`. Raporty Surefire i screenshoty błędów są publikowane jako artefakty. Przed instalacją binariów workflow wykonuje osobny krok `install-deps`, który instaluje systemowe biblioteki dla wszystkich silników Playwright. Następnie pobierane są przeglądarki. Są to kroki zgodne z oficjalną instrukcją Playwright Java.
 
