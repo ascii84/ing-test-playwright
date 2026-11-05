@@ -52,7 +52,7 @@ Dozwolone wartości właściwości `browser`: `all` (domyślnie), `chromium`, `f
 
 ## Pipeline – GitHub Actions
 
-Workflow znajduje się w `.github/workflows/cross-browser.yml`. Najpierw job `prepare` pobiera zależności Maven i Playwright CLI jeden raz, aby uniknąć równoczesnego odpytywania Maven Central przez trzy joby (w poprzednim uruchomieniu Maven Central zwrócił HTTP 429). Następnie macierz z trzema wartościami `chromium`, `firefox`, `webkit` uruchamia osobny job dla każdej przeglądarki. `max-parallel: 3` pozwala wykonywać je jednocześnie, a `fail-fast: false` nie przerywa pozostałych jobów po błędzie jednej przeglądarki. CLI Playwright jest wywoływane pełną współrzędną Maven pluginu, bez dynamicznego wyszukiwania prefiksu `exec`.
+Workflow znajduje się w `.github/workflows/cross-browser.yml`. Najpierw job `prepare` pobiera zależności Maven i Playwright CLI jeden raz, aby uniknąć równoczesnego odpytywania Maven Central przez trzy joby (w poprzednim uruchomieniu Maven Central zwrócił HTTP 429). Następnie macierz z trzema wartościami `chromium`, `firefox`, `webkit` uruchamia osobny job dla każdej przeglądarki. `max-parallel: 3` pozwala wykonywać je jednocześnie, a `fail-fast: false` nie przerywa pozostałych jobów po błędzie jednej przeglądarki. Każdy job instaluje tylko biblioteki systemowe i binaria wybranej przeglądarki (np. job Chromium nie pobiera ciężkich zależności WebKit/GStreamer). Runner jest przypięty do `ubuntu-24.04`, a job E2E ma limit 20 minut. CLI Playwright jest wywoływane pełną współrzędną Maven pluginu, bez dynamicznego wyszukiwania prefiksu `exec`.
 
 Workflow uruchamia się po `push`, `pull_request` oraz ręcznie przez `workflow_dispatch`. Raporty Surefire i screenshoty błędów są publikowane jako artefakty. Przed instalacją binariów workflow wykonuje osobny krok `install-deps`, który instaluje systemowe biblioteki dla wszystkich silników Playwright. Następnie pobierane są przeglądarki. Są to kroki zgodne z oficjalną instrukcją Playwright Java.
 
@@ -86,7 +86,7 @@ Workflow uruchamia się po `push`, `pull_request` oraz ręcznie przez `workflow_
 
 ING może pokazać stronę ochronną „Dlaczego widzisz tę stronę?” z weryfikacją „Jestem człowiekiem” zamiast właściwej strony. W szczególności publiczne adresy IP runnerów CI mogą zostać potraktowane jako nietypowe źródło ruchu. W takim przypadku test kończy się czytelnym błędem i zapisuje screenshot. Test celowo nie rozwiązuje ani nie obchodzi CAPTCHA.
 
-Aby uruchomić pełny scenariusz E2E, użyj sieci/runnera dopuszczonego przez ING (np. self-hosted GitHub Actions runner w zaufanej sieci) albo uzgodnionego środowiska testowego. W workflow można ustawić zmienną repozytorium `ING_RUNNER=self-hosted`; domyślnie używany jest `ubuntu-latest`. Dla prawdziwej równoległości na self-hosted potrzebne są trzy dostępne sloty/instancje runnera.
+Aby uruchomić pełny scenariusz E2E, użyj sieci/runnera dopuszczonego przez ING (np. self-hosted GitHub Actions runner w zaufanej sieci) albo uzgodnionego środowiska testowego. W workflow można ustawić zmienną repozytorium `ING_RUNNER=self-hosted`; domyślnie używany jest `ubuntu-24.04`. Dla prawdziwej równoległości na self-hosted potrzebne są trzy dostępne sloty/instancje runnera.
 
 ## Ważna uwaga
 
