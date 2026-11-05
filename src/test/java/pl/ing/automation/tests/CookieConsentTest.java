@@ -9,10 +9,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 import pl.ing.automation.config.BrowserFactory;
 import pl.ing.automation.config.BrowserName;
 import pl.ing.automation.helpers.CookieHelper;
+import pl.ing.automation.helpers.ScreenshotHelper;
 import pl.ing.automation.pages.CookieConsentPage;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Stream;
@@ -85,24 +84,12 @@ class CookieConsentTest {
             System.out.println("Test passed on " + browserName);
 
         } catch (RuntimeException | AssertionError error) {
-            saveScreenshot(page, browserName);
+            ScreenshotHelper.save(page, browserName);
             throw error;
         } finally {
             if (context != null) context.close();
             if (browser != null) browser.close();
             if (playwright != null) playwright.close();
-        }
-    }
-
-    private static void saveScreenshot(Page page, BrowserName browserName) {
-        if (page == null) return;
-
-        try {
-            Path screenshot = Path.of("target", "screenshots", browserName.name().toLowerCase() + ".png");
-            Files.createDirectories(screenshot.getParent());
-            page.screenshot(new Page.ScreenshotOptions().setPath(screenshot).setFullPage(true));
-        } catch (Exception error) {
-            System.err.println("Could not save screenshot: " + error.getMessage());
         }
     }
 }
