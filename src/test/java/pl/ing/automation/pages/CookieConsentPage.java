@@ -6,7 +6,6 @@ import com.microsoft.playwright.options.WaitUntilState;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * Obiekt strony reprezentujący baner zgody na pliki cookie ING.
@@ -15,20 +14,10 @@ public final class CookieConsentPage {
 
     private static final String URL = "https://www.ing.pl/";
 
-    private static final Pattern CUSTOMIZE =
-            Pattern.compile("Dostosuj|Ustawienia", Pattern.CASE_INSENSITIVE);
-    private static final Pattern ANALYTICS =
-            Pattern.compile("Anality|Statyst", Pattern.CASE_INSENSITIVE);
-    private static final Pattern MARKETING =
-            Pattern.compile("Marketing", Pattern.CASE_INSENSITIVE);
-    private static final Pattern SAVE =
-            Pattern.compile("Zaakceptuj zaznaczone",
-                    Pattern.CASE_INSENSITIVE);
-    private static final Pattern CAPTCHA =
-            Pattern.compile("Jestem\\s+cz[łl]owiekiem|Dlaczego\\s+widzisz\\s+t[eę]\\s+stron[eę]|"
-                    + "Możliwe, że jesteś za granicą|Why do you see this page|"
-                    + "I am human|I'm human|Verify you are human|hcaptcha",
-                    Pattern.CASE_INSENSITIVE);
+    private static final String CUSTOMIZE = "Dostosuj";
+    private static final String ANALYTICS = "Anality";
+    private static final String MARKETING = "Marketing";
+    private static final String SAVE = "Zaakceptuj zaznaczone";
 
     private final Page page;
 
@@ -70,9 +59,16 @@ public final class CookieConsentPage {
 
             try {
                 String frameText = frame.locator("body").innerText(
-                        new Locator.InnerTextOptions().setTimeout(1500));
+                        new Locator.InnerTextOptions().setTimeout(1500)).toLowerCase();
 
-                if (CAPTCHA.matcher(frameText).find()) {
+                if (frameText.contains("jestem człowiekiem")
+                        || frameText.contains("dlaczego widzisz tę stronę")
+                        || frameText.contains("możliwe, że jesteś za granicą")
+                        || frameText.contains("why do you see this page")
+                        || frameText.contains("i am human")
+                        || frameText.contains("i'm human")
+                        || frameText.contains("verify you are human")
+                        || frameText.contains("hcaptcha")) {
                     throw new AssertionError(
                             "ING displayed an anti-bot verification page instead of the cookie banner. "
                                     + "The test does not solve or bypass CAPTCHA. "
@@ -86,7 +82,7 @@ public final class CookieConsentPage {
         }
     }
 
-    private void clickButton(Pattern name) {
+    private void clickButton(String name) {
         checkForCaptcha();
 
         for (Frame frame : page.frames()) {
@@ -107,7 +103,7 @@ public final class CookieConsentPage {
                 + ". Page text: " + pageText());
     }
 
-    private void setCategory(Pattern category, boolean enabled) {
+    private void setCategory(String category, boolean enabled) {
         for (Frame frame : page.frames()) {
             Locator toggle = frame.getByRole(AriaRole.SWITCH,
                     new Frame.GetByRoleOptions().setName(category)).first();
