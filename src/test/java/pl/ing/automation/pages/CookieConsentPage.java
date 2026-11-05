@@ -5,6 +5,8 @@ import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import com.microsoft.playwright.options.WaitUntilState;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -24,8 +26,9 @@ public final class CookieConsentPage {
             Pattern.compile("Zaakceptuj zaznaczone",
                     Pattern.CASE_INSENSITIVE);
     private static final Pattern CAPTCHA =
-            Pattern.compile("Jestem człowiekiem|Dlaczego widzisz tę stronę|Możliwe, że jesteś za granicą|"
-                    + "Why do you see this page|I am human|I'm human|Verify you are human",
+            Pattern.compile("Jestem\\s+cz[łl]owiekiem|Dlaczego\\s+widzisz\\s+t[eę]\\s+stron[eę]|"
+                    + "Możliwe, że jesteś za granicą|Why do you see this page|"
+                    + "I am human|I'm human|Verify you are human|hcaptcha",
                     Pattern.CASE_INSENSITIVE);
 
     private final Page page;
@@ -57,10 +60,30 @@ public final class CookieConsentPage {
             return;
         }
 
-        String pageText = page.locator("body").innerText();
-        if (CAPTCHA.matcher(pageText).find()) {
+        for (Frame frame : page.frames()) {
+            try {
+                String frameText = frame.locator("body").innerText(
+                        new Locator.InnerTextOptions().setTimeout(1500));
+                if (CAPTCHA.matcher(frameText).find()) {
+                    throw new AssertionError(
+                            "ING displayed an anti-bot verification page instead of the cookie banner. "
+                                    + "The test does not solve or bypass CAPTCHA. "
+                                    + "Frame URL: " + frame.url()
+                                    + ", page URL: " + page.url()
+                                    + ", page text: " + shorten(frameText));
+                }
+            } catch (TimeoutError ignored) {
+                // An empty or still-loading frame may not have a body yet.
+            }
+        }
+
+        boolean captchaFrame = page.frames().stream()
+                .map(Frame::url)
+                .anyMatch(frameUrl -> frameUrl != null
+                        && frameUrl.toLowerCase().contains("captcha"));
+        if (captchaFrame) {
             throw new AssertionError(
-                    "ING displayed an anti-bot verification page instead of the cookie banner. "
+                    "ING loaded a CAPTCHA frame instead of the cookie banner. "
                             + "The test does not solve or bypass CAPTCHA. URL: " + page.url());
         }
     }
@@ -77,7 +100,11 @@ public final class CookieConsentPage {
         }
 
         checkForCaptcha();
-        throw new AssertionError("Could not find button: " + name);
+        throw new AssertionError("Could not find button: " + name
+                + ". Page URL: " + page.url()
+                + ". Page title: " + page.title()
+                + ". Frame URLs: " + frameUrls()
+                + ". Page text: " + pageText());
     }
 
     private void setCategory(Pattern category, boolean enabled) {
@@ -104,7 +131,10 @@ public final class CookieConsentPage {
             }
         }
 
-        throw new AssertionError("Could not find cookie setting: " + category);
+        throw new AssertionError("Could not find cookie setting: " + category
+                + ". Page URL: " + page.url()
+                + ". Frame URLs: " + frameUrls()
+                + ". Page text: " + pageText());
     }
 
     private Locator findVisible(Frame frame, AriaRole role, Pattern name) {
@@ -119,5 +149,30 @@ public final class CookieConsentPage {
         } catch (TimeoutError ignored) {
             return null;
         }
+    }
+
+    private String pageText() {
+        List<String> texts = new ArrayList<>();
+        for (Frame frame : page.frames()) {
+            try {
+                String value = frame.locator("body").innerText(
+                        new Locator.InnerTextOptions().setTimeout(1000)).replaceAll("\\s+", " ").trim();
+                if (!value.isBlank()) {
+                    texts.add(shorten(value));
+                }
+            } catch (RuntimeException ignored) {
+                // Keep diagnostics from the frames that are accessible.
+            }
+        }
+        return texts.toString();
+    }
+
+    private String frameUrls() {
+        return page.frames().stream().map(Frame::url).toList().toString();
+    }
+
+    private static String shorten(String value) {
+        String normalized = value.replaceAll("\\s+", " ").trim();
+        return normalized.length() > 400 ? normalized.substring(0, 400) + "..." : normalized;
     }
 }
