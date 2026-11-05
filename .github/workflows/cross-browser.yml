@@ -35,11 +35,10 @@ jobs:
 
   e2e:
     name: E2E / ${{ matrix.browser }}
-    needs: prepare
-    # Set repository variable ING_RUNNER=self-hosted to use a runner on an
-    # ING-approved/trusted network. Defaults to GitHub-hosted Linux runners.
-    runs-on: ${{ vars.ING_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 25
+    # Set repository variable ING_RUNNER=self-hosted to use an ING-approved/trusted network.
+    # The default hosted runner is pinned to Ubuntu 24.04 for reproducibility.
+    runs-on: ${{ vars.ING_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       max-parallel: 3
@@ -57,20 +56,21 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # Explicitly install Linux packages for all three Playwright engines.
-      - name: Install Linux browser dependencies
+      # Install only the dependencies required by this matrix browser.
+      # This avoids installing WebKit/GStreamer dependencies in Chromium jobs.
+      - name: Install Linux dependencies for selected browser
         run: >-
           mvn -B -DskipTests
           org.codehaus.mojo:exec-maven-plugin:3.5.0:java
           -Dexec.mainClass=com.microsoft.playwright.CLI
-          -Dexec.args="install-deps"
+          -Dexec.args="install-deps ${{ matrix.browser }}"
 
-      - name: Install Playwright browser binaries
+      - name: Install selected Playwright browser
         run: >-
           mvn -B -DskipTests
           org.codehaus.mojo:exec-maven-plugin:3.5.0:java
           -Dexec.mainClass=com.microsoft.playwright.CLI
-          -Dexec.args="install"
+          -Dexec.args="install ${{ matrix.browser }}"
 
       - name: Run E2E test
         run: mvn -B -Dbrowser=${{ matrix.browser }} test
