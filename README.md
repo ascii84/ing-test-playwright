@@ -20,21 +20,117 @@ Nazwy cookies należy okresowo weryfikować z aktualną [Polityką plików cooki
 
 ## Wymagania
 
-- Java 21+
-- Maven 3.9+
-- Połączenie z internetem (strona ING i pobranie binariów przeglądarek Playwright)
+Przed uruchomieniem projektu zainstaluj:
+
+- **Git** – do pobrania repozytorium,
+- **Java JDK 21 lub nowszą** – projekt korzysta z Javy 21,
+- **Apache Maven 3.9 lub nowszy** – do budowania i uruchamiania testów,
+- połączenie z internetem – strona ING oraz pobranie zależności i przeglądarek Playwright.
+
+Nie musisz wcześniej instalować Chrome, Firefox ani Safari. Playwright pobiera własne wersje przeglądarek.
+
+### Instalacja narzędzi
+
+#### macOS (w tym Apple Silicon: M1/M2/M3/M4)
+
+1. Zainstaluj [Homebrew](https://brew.sh/). Oficjalna komenda instalacyjna:
+
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   ```
+
+2. Po instalacji Homebrew dodaj je do ścieżki. Dla Apple Silicon (M1/M2/M3/M4):
+
+   ```bash
+   echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+   eval "$(/opt/homebrew/bin/brew shellenv)"
+   ```
+
+   Dla Maców z procesorem Intel Homebrew zwykle znajduje się w `/usr/local`; postępuj zgodnie z instrukcją wyświetloną przez instalator Homebrew.
+
+3. Zainstaluj Git, Java 21 i Maven:
+
+   ```bash
+   brew install git
+   brew install --cask temurin@21
+   brew install maven
+   ```
+
+4. Sprawdź instalację:
+
+   ```bash
+   git --version
+   java -version
+   mvn -version
+   ```
+
+#### Windows
+
+Zainstaluj Git, JDK 21 (np. Eclipse Temurin) oraz Maven 3.9+:
+
+- [Git for Windows](https://git-scm.com/download/win)
+- [Eclipse Temurin JDK 21](https://adoptium.net/temurin/releases/?version=21)
+- [Apache Maven](https://maven.apache.org/install.html)
+
+Po instalacji otwórz nowe okno PowerShell i sprawdź:
+
+```powershell
+git --version
+java -version
+mvn -version
+```
+
+Jeśli polecenie `mvn` nie jest rozpoznawane, dodaj katalog `bin` instalacji Maven do zmiennej środowiskowej `PATH` i otwórz ponownie terminal.
+
+#### Linux (Ubuntu/Debian)
+
+Zainstaluj wymagane narzędzia:
+
+```bash
+sudo apt update
+sudo apt install -y git openjdk-21-jdk maven
+```
+
+Sprawdź instalację:
+
+```bash
+git --version
+java -version
+mvn -version
+```
+
+## Pobranie projektu
+
+Otwórz terminal i przejdź do katalogu, w którym chcesz umieścić projekt. Następnie wykonaj:
+
+```bash
+git clone https://github.com/ascii84/ing-test-playwright.git
+cd ing-test-playwright
+```
+
+**Ważne:** wszystkie poniższe polecenia Maven uruchamiaj z katalogu projektu, w którym znajduje się plik `pom.xml`. Jeśli terminal zgłasza, że nie znaleziono `pom.xml`, najpierw przejdź do katalogu `ing-test-playwright`.
 
 ## Uruchomienie lokalne
 
-W katalogu projektu wykonaj:
+### Instalacja przeglądarek Playwright
+
+Pobierz binaria Chromium, Firefox i WebKit:
 
 ```bash
-# Instalacja przeglądarek Playwright
-mvn -B -DskipTests exec:java \
-  -Dexec.mainClass=com.microsoft.playwright.CLI \
-  -Dexec.args="install"
+mvn -B -DskipTests org.codehaus.mojo:exec-maven-plugin:3.5.0:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install"
+```
 
-# Uruchomienie testu w Chromium, Firefox i WebKit
+Na Linuxie może być też konieczne doinstalowanie bibliotek systemowych wymaganych przez przeglądarki:
+
+```bash
+mvn -B -DskipTests org.codehaus.mojo:exec-maven-plugin:3.5.0:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install-deps"
+```
+
+### Uruchomienie testów
+
+Uruchom testy we wszystkich trzech przeglądarkach:
+
+```bash
 mvn clean test
 ```
 
@@ -44,12 +140,10 @@ Domyślnie trzy przeglądarki uruchamiane są równolegle. Każda iteracja testu
 
 Jeżeli ING wyświetla hCaptcha, możesz uruchomić pojedynczy test Chromium lokalnie w trybie headed. Playwright pokaże okno przeglądarki i zatrzyma wykonanie w Playwright Inspector. Wykonaj weryfikację samodzielnie w oknie przeglądarki, a następnie kliknij **Resume** w Inspectorze. Test sprawdzi, czy ekran ochronny zniknął i będzie kontynuował scenariusz cookies.
 
-Najpierw pobierz Chromium:
+Najpierw pobierz samo Chromium:
 
 ```bash
-mvn -B -DskipTests org.codehaus.mojo:exec-maven-plugin:3.5.0:java \
-  -Dexec.mainClass=com.microsoft.playwright.CLI \
-  -Dexec.args="install chromium"
+mvn -B -DskipTests org.codehaus.mojo:exec-maven-plugin:3.5.0:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium"
 ```
 
 Następnie uruchom widoczny test:
@@ -111,10 +205,3 @@ Aby uruchomić pełny scenariusz E2E, użyj sieci/runnera dopuszczonego przez IN
 ## Ważna uwaga
 
 To test E2E publicznej strony ING, a nie kontrolowanej aplikacji testowej. Wynik zależy również od dostępności serwisu, sieci, skryptów zewnętrznych i aktualnej implementacji banera zgód. Jeżeli ING zmieni dostawcę analityki albo nazwy cookies, selektory i asercje wymagają aktualizacji.
-
-Na Ubuntu/Linux lokalnie zainstaluj zależności systemowe i przeglądarki:
-
-```bash
-mvn -B -DskipTests exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install-deps"
-mvn -B -DskipTests exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install"
-```
