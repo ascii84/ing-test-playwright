@@ -40,6 +40,26 @@ mvn clean test
 
 Domyślnie trzy przeglądarki uruchamiane są równolegle. Każda iteracja testu tworzy własną instancję Playwright, przeglądarkę i czysty `BrowserContext`; cookies nie są współdzielone.
 
+### Ręczne przejście weryfikacji ING (widoczna przeglądarka)
+
+Jeżeli ING wyświetla hCaptcha, możesz uruchomić pojedynczy test Chromium lokalnie w trybie headed. Playwright pokaże okno przeglądarki i zatrzyma wykonanie w Playwright Inspector. Wykonaj weryfikację samodzielnie w oknie przeglądarki, a następnie kliknij **Resume** w Inspectorze. Test sprawdzi, czy ekran ochronny zniknął i będzie kontynuował scenariusz cookies.
+
+Najpierw pobierz Chromium:
+
+```bash
+mvn -B -DskipTests org.codehaus.mojo:exec-maven-plugin:3.5.0:java \
+  -Dexec.mainClass=com.microsoft.playwright.CLI \
+  -Dexec.args="install chromium"
+```
+
+Następnie uruchom widoczny test:
+
+```bash
+mvn -Dbrowser=chromium -Dheaded=true -DmanualVerification=true test
+```
+
+Ten tryb wymaga komputera z interfejsem graficznym. Nie uruchamiaj go na GitHub-hosted runnerze. Test nie automatyzuje rozwiązywania CAPTCHA — człowiek wykonuje tę czynność, a Playwright jedynie wznawia scenariusz po ręcznym potwierdzeniu.
+
 ### Uruchomienie tylko w jednej przeglądarce
 
 ```bash
