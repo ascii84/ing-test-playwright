@@ -24,7 +24,8 @@ public final class CookieConsentPage {
             Pattern.compile("Zaakceptuj zaznaczone",
                     Pattern.CASE_INSENSITIVE);
     private static final Pattern CAPTCHA =
-            Pattern.compile("Jestem człowiekiem|Dlaczego widzisz tę stronę|Verify you are human",
+            Pattern.compile("Jestem człowiekiem|Dlaczego widzisz tę stronę|Możliwe, że jesteś za granicą|"
+                    + "Why do you see this page|I am human|I'm human|Verify you are human",
                     Pattern.CASE_INSENSITIVE);
 
     private final Page page;
@@ -75,6 +76,7 @@ public final class CookieConsentPage {
             }
         }
 
+        checkForCaptcha();
         throw new AssertionError("Could not find button: " + name);
     }
 
